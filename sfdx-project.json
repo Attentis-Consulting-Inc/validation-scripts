@@ -1,6 +1,9 @@
 {
   "packageDirectories": [
     {
+      "path": "other-app"
+    },
+    {
       "path": "force-app",
       "default": true
     }
