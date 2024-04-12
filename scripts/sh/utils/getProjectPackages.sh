@@ -5,5 +5,5 @@
     exit 1
 }
 
-PROJECT_PACKAGES="$(jq .packageDirectories[].path "$SFDX_ROOT"/sfdx-project.json)"
+PROJECT_PACKAGES="$(jq .packageDirectories[].path "$SFDX_ROOT"/sfdx-project.json | sed 's/"//g')"
 export PROJECT_PACKAGES
