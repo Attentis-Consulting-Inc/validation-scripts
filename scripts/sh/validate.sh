@@ -1,33 +1,27 @@
 #!/bin/sh
 
-selected=0
 VALIDATION_MODE=
 
 display_help() {
-    echo "Usage: $(basename "$0") <option> " >&2
+    echo "Usage: $(basename "$0") [option] " >&2
+    echo "Run validations on an sfdx project for: Formatting, Prettier, PMD, ESLint, and run Jest tests"
+    echo "Options are mutually exclusive and only one may be provided"
     echo
     echo "Options:"
-    echo "   -a, --all                  run validations for the entire project"
-    echo "   -p, --package <name>       run validations on <name> package. If only one package, equivalent to --all"
-    echo "   -s, --staged               run validations on staged files"
-    echo "   -c, --commit               run validations on latest commit against parent"
-    echo "   -d, --diff <hash>          run validations on <hash> commit against parent"
+    echo "   -a, --all (default)                run validations for the entire project"
+    echo "   -p, --package <name>               run validations on <name> package."
+    echo "   -s, --staged                       run validations on staged files"
+    echo "   -c, --commit [<hash>]              run validations on <hash> commit against parent (default: HEAD)"
+    echo "   -d, --diff <hash 1> [<hash 2>]     run validations on the diff between <hash 1> and <hash 2> (default: HEAD)"
     echo
-    echo "   -h, --help                 display this help"
+    echo "   -h, --help                         display this help"
     exit 1
-}
-
-check_if_in_git() {
-    GIT_ROOT=$(git rev-parse --show-toplevel 2>&1)
-    [ -d "$GIT_ROOT" ] || { echo "Not in a git repository" >&2 && exit 1; }
 }
 
 get_sfdx_root() {
     RESULT=$(find "$1" -maxdepth 1 -name "sfdx-project.json")
     if [ "$RESULT" ]; then
-        SFDX_ROOT=$(realpath "$1")
-        export SFDX_ROOT
-        return 0
+        SFDX_ROOT=$(realpath "$1") && export SFDX_ROOT && return 0
     elif [ "$(realpath "$1")" = "$HOME" ] || [ "$(realpath "$1")" = "/" ]; then
         echo "Not in an SFDX project" >&2 && exit 1
     else
@@ -35,92 +29,105 @@ get_sfdx_root() {
     fi
 }
 
-validate_commit() {
-    (git merge-base --is-ancestor "$COMMIT" HEAD 2>/dev/null) || {
-        echo "$COMMIT is not a valid commit hash" >&2
-        exit 1
-    }
+validate_package() {
+    matching_packages=$(echo "$PROJECT_PACKAGES" | grep "$PACKAGE_NAME" --line-regexp --count --directories=read)
+    [ "$matching_packages" -gt 0 ] || { echo "$PACKAGE_NAME is not a valid package name" >&2 && exit 1; }
 }
 
-validate_package() {
-    matching_packages=$(echo "$PROJECT_PACKAGES" | grep "$PACKAGE_NAME" --count --directories=read)
-    [ "$matching_packages" -gt 0 ] || {
-        echo "$PACKAGE_NAME is not a valid package name" >&2
-        exit 1
-    }
+check_if_in_git() {
+    GIT_ROOT=$(git rev-parse --show-toplevel 2>&1)
+    [ -d "$GIT_ROOT" ] || { echo "Not in a git repository" >&2 && exit 1; }
+}
+
+validate_commit() {
+    { (git cat-file -e "$1" 2>/dev/null) && return 0; } || return 1
+}
+
+validate_diff() {
+    (git merge-base --is-ancestor "$1" "$2" 2>/dev/null) || return 1
+}
+
+validate_exclusive_options() {
+    [ -z $VALIDATION_MODE ] || { echo "Only one option may be provided" >&2 && echo && display_help; }
 }
 
 args() {
-    options=$(getopt -o ap:scd:h --long 'all,package:,staged,commit,diff:,help' -- "$@" 2>&1)
-    [ $? -eq 0 ] || {
-        echo "Unrecognized option provided"
-        exit 1
-    }
+    options=$(getopt -o apscdh --long 'all,package,staged,commit,diff,help' -- "$@") || exit 1
     eval set -- "$options"
     while true; do
         case "$1" in
             -a | --all)
-                selected=$((selected + 1))
+                validate_exclusive_options
                 VALIDATION_MODE="all"
                 shift
-                continue
                 ;;
             -p | --package)
-                selected=$((selected + 1))
+                validate_exclusive_options
                 VALIDATION_MODE="package"
-                case "$2" in
-                    -*)
-                        echo "-p | --package requires a package name as argument" >&2
-                        exit 1
-                        ;;
-                esac
-
-                PACKAGE_NAME=$2
-                validate_package
-                shift 2
-                continue
+                shift
                 ;;
             -s | --staged)
-                selected=$((selected + 1))
-                VALIDATION_MODE="staged"
+                validate_exclusive_options
                 check_if_in_git
+                VALIDATION_MODE="staged"
                 shift
-                continue
                 ;;
             -c | --commit)
-                selected=$((selected + 1))
+                validate_exclusive_options
                 VALIDATION_MODE="commit"
-                COMMIT="HEAD"
                 check_if_in_git
                 shift
-                continue
                 ;;
             -d | --diff)
-                selected=$((selected + 1))
+                validate_exclusive_options
                 VALIDATION_MODE="diff"
-                case "$2" in
-                    -*)
-                        echo "-d | --diff requires a commit hash as argument" >&2
-                        exit 1
-                        ;;
-                esac
-
-                COMMIT=$2
                 check_if_in_git
-                validate_commit
-                shift 2
-                continue
+                shift
                 ;;
             -h | --help)
+                validate_exclusive_options
                 display_help
                 ;;
             --)
-                shift
-                break
+                shift && break
                 ;;
         esac
-        shift
     done
+
+    shift
+
+    [ -n "$VALIDATION_MODE" ] || VALIDATION_MODE="all"
+
+    case "$VALIDATION_MODE" in
+        "package")
+            [ -n "$1" ] || { echo "--package requires a name to be provided" >&2 && exit 1; }
+            PACKAGE_NAME=$1
+            validate_package
+            ;;
+        "commit")
+            # TODO: Handle non-hash representations like HEAD being passed
+            if [ -n "$1" ]; then
+                COMMIT=$1
+            else
+                COMMIT=$(git rev-parse --short HEAD)
+            fi
+            validate_commit "$COMMIT" || { echo "$COMMIT is not a valid commit hash" >&2 && exit 1; }
+            (git rev-parse --short "$COMMIT^1" 2>/dev/null) || { echo "$COMMIT does not have a parent to validate against" >&2 && exit 1; }
+            ;;
+        "diff")
+            [ -n "$1" ] || { echo "--diff requires at least one commit hash" >&2 && exit 1; }
+            HASH1="$1"
+            if [ -n "$2" ]; then
+                HASH2=$2
+            else
+                HASH2=$(git rev-parse --short HEAD)
+            fi
+            validate_commit "$HASH1" || { echo "$HASH1 is not a valid commit hash" >&2 && exit 1; }
+            validate_commit "$HASH2" || { echo "$HASH2 is not a valid commit hash" >&2 && exit 1; }
+            validate_diff "$HASH1" "$HASH2"
+            ;;
+
+    esac
 }
 
 get_sfdx_root .
@@ -129,16 +136,19 @@ SCRIPTS_DIR="$SFDX_ROOT"/scripts/sh
 
 args "$0" "$@"
 
-if [ $selected -eq 0 ]; then
-    VALIDATION_MODE="all"
-elif [ $selected -gt 1 ]; then
-    echo "Only one of --all, --package, --staged, --commit, or --diff can be used" >&2 && exit 1
-fi
+echo "$VALIDATION_MODE"
+echo "$PACKAGE_NAME"
+echo "$COMMIT"
+echo "$HASH1"
+echo "$HASH2"
 
 exit 0
 
 export VALIDATION_MODE
 export COMMIT
+export PACKAGE_NAME
+export HASH1
+export HASH2
 
 . "$SCRIPTS_DIR"/utils/getFilesToValidate.sh
 
