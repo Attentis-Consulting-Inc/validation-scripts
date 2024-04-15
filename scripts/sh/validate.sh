@@ -113,7 +113,10 @@ args() {
             fi
             validate_commit "$hash" || { echo "$hash is not a valid commit hash" >&2 && exit 1; }
             COMMIT="$parsed_hash"
-            (git rev-parse --short "$COMMIT^1" 2>/dev/null) || { echo "$COMMIT does not have a parent to validate against" >&2 && exit 1; }
+            if [ ! "$(git rev-parse --short "$COMMIT^1" 2>/dev/null)" ]; then
+                echo "$COMMIT does not have a parent to validate against" >&2
+                exit 1
+            fi
             ;;
         "diff")
             [ -n "$1" ] || { echo "--diff requires at least one commit hash" >&2 && exit 1; }
@@ -139,14 +142,6 @@ SCRIPTS_DIR="$SFDX_ROOT"/scripts/sh
 
 args "$0" "$@"
 
-echo "$VALIDATION_MODE"
-echo "$PACKAGE_NAME"
-echo "$COMMIT"
-echo "$HASH1"
-echo "$HASH2"
-
-exit 0
-
 export VALIDATION_MODE
 export COMMIT
 export PACKAGE_NAME
@@ -154,6 +149,8 @@ export HASH1
 export HASH2
 
 . "$SCRIPTS_DIR"/utils/getFilesToValidate.sh
+echo "$FILES_TO_VALIDATE"
+exit 0
 
 . "$SCRIPTS_DIR"/validations/validateProjectVersion.sh
 . "$SCRIPTS_DIR"/validations/validateFormatting.sh
