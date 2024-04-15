@@ -140,7 +140,12 @@ get_sfdx_root .
 SCRIPTS_DIR="$SFDX_ROOT"/scripts/sh
 . "$SCRIPTS_DIR"/utils/getProjectPackages.sh
 
-args "$0" "$@"
+if [ ! "$PIPELINE_MODE" ]; then
+    args "$0" "$@"
+else
+    VALIDATION_MODE="commit"
+    COMMIT="HEAD"
+fi
 
 export VALIDATION_MODE
 export COMMIT
@@ -150,7 +155,9 @@ export HASH2
 
 . "$SCRIPTS_DIR"/utils/getFilesToValidate.sh
 
-. "$SCRIPTS_DIR"/validations/validateProjectVersion.sh
-. "$SCRIPTS_DIR"/validations/validateFormatting.sh
-. "$SCRIPTS_DIR"/validations/validatePMD.sh
-. "$SCRIPTS_DIR"/validations/validateLightningComponents.sh
+if [ ! "$PIPELINE_MODE" ]; then
+    . "$SCRIPTS_DIR"/validations/validateProjectVersion.sh
+    . "$SCRIPTS_DIR"/validations/validateFormatting.sh
+    . "$SCRIPTS_DIR"/validations/validatePMD.sh
+    . "$SCRIPTS_DIR"/validations/validateLightningComponents.sh
+fi
