@@ -32,10 +32,10 @@ $(echo "$FILES_TO_VALIDATE" | xargs grep --perl '^\s*\t+' --with-filename --only
 EOF2
 
 if [ $violations -eq 0 ]; then
-    env printf "\e[1;32m\u2713\e[0m All files match project version\n"
+    env printf "\e[1;32m\u2713\e[0m No whitespace issues found\n"
 else
     env printf "\n\e[1;31m\xE2\x9D\x8C %s total whitespace problems\e[0m\n" "$violations" >&2
-    [ "$VALIDATION_MODE" = "merge" ] && return 1
+    [ ! "$PIPELINE_MODE" ] || return 1
 fi
 
 # Validate formatting with Prettier

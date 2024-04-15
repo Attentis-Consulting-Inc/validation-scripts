@@ -149,8 +149,6 @@ export HASH1
 export HASH2
 
 . "$SCRIPTS_DIR"/utils/getFilesToValidate.sh
-echo "$FILES_TO_VALIDATE"
-exit 0
 
 . "$SCRIPTS_DIR"/validations/validateProjectVersion.sh
 . "$SCRIPTS_DIR"/validations/validateFormatting.sh

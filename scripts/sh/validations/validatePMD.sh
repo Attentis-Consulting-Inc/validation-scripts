@@ -4,8 +4,10 @@
 
 env printf "\e[1;34m-----\n\u279C Running PMD\n-----\e[0m\n"
 
-if [ "$FILES_TO_VALIDATE" = "force-app" ]; then
-    apex_files=$(find "$SFDX_ROOT"/force-app -type f -name "*.cls" -or -name "*.trigger")
+if [ "$VALIDATION_MODE" = "all" ]; then
+    apex_files=$(find "$SFDX_ROOT" -type f -name "*.cls" -or -name "*.trigger")
+elif [ "$VALIDATION_MODE" = "package" ]; then
+    apex_files=$(find "$SFDX_ROOT"/"$FILES_TO_VALIDATE" -type f -name "*.cls" -or -name "*.trigger")
 else
     apex_files=$(echo "$FILES_TO_VALIDATE" | grep --extended-regexp ".*\.(cls|trigger)$" -)
 fi
