@@ -1,6 +1,7 @@
 #!/bin/sh
 
 VALIDATION_MODE=
+parsed_hash=
 
 display_help() {
     echo "Usage: $(basename "$0") [option] " >&2
@@ -40,7 +41,7 @@ check_if_in_git() {
 }
 
 validate_commit() {
-    { (git cat-file -e "$1" 2>/dev/null) && return 0; } || return 1
+    parsed_hash=$(git rev-parse --short "$1" 2>/dev/null) || return 1
 }
 
 validate_diff() {
@@ -105,25 +106,27 @@ args() {
             validate_package
             ;;
         "commit")
-            # TODO: Handle non-hash representations like HEAD being passed
             if [ -n "$1" ]; then
-                COMMIT=$1
+                hash=$1
             else
-                COMMIT=$(git rev-parse --short HEAD)
+                hash="HEAD"
             fi
-            validate_commit "$COMMIT" || { echo "$COMMIT is not a valid commit hash" >&2 && exit 1; }
+            validate_commit "$hash" || { echo "$hash is not a valid commit hash" >&2 && exit 1; }
+            COMMIT="$parsed_hash"
             (git rev-parse --short "$COMMIT^1" 2>/dev/null) || { echo "$COMMIT does not have a parent to validate against" >&2 && exit 1; }
             ;;
         "diff")
             [ -n "$1" ] || { echo "--diff requires at least one commit hash" >&2 && exit 1; }
-            HASH1="$1"
+            hash="$1"
             if [ -n "$2" ]; then
-                HASH2=$2
+                hash_2=$2
             else
-                HASH2=$(git rev-parse --short HEAD)
+                hash_2=$(git rev-parse --short HEAD)
             fi
-            validate_commit "$HASH1" || { echo "$HASH1 is not a valid commit hash" >&2 && exit 1; }
-            validate_commit "$HASH2" || { echo "$HASH2 is not a valid commit hash" >&2 && exit 1; }
+            validate_commit "$hash" || { echo "$hash is not a valid commit hash" >&2 && exit 1; }
+            HASH1="$parsed_hash"
+            validate_commit "$hash_2" || { echo "$hash_2 is not a valid commit hash" >&2 && exit 1; }
+            HASH2="$parsed_hash"
             validate_diff "$HASH1" "$HASH2"
             ;;
 
