@@ -19,17 +19,6 @@ display_help() {
     exit 1
 }
 
-get_sfdx_root() {
-    RESULT=$(find "$1" -maxdepth 1 -name "sfdx-project.json")
-    if [ "$RESULT" ]; then
-        SFDX_ROOT=$(realpath "$1") && export SFDX_ROOT && return 0
-    elif [ "$(realpath "$1")" = "$HOME" ] || [ "$(realpath "$1")" = "/" ]; then
-        echo "Not in an SFDX project" >&2 && exit 1
-    else
-        get_sfdx_root ../"$1"
-    fi
-}
-
 validate_package() {
     matching_packages=$(echo "$PROJECT_PACKAGES" | grep "$PACKAGE_NAME" --line-regexp --count --directories=read)
     [ "$matching_packages" -gt 0 ] || { echo "$PACKAGE_NAME is not a valid package name" >&2 && exit 1; }
@@ -136,9 +125,8 @@ args() {
     esac
 }
 
-get_sfdx_root .
-SCRIPTS_DIR="$SFDX_ROOT"/scripts/sh
-. "$SCRIPTS_DIR"/utils/getProjectPackages.sh
+[ -f sfdx-project.json ] || { echo "Must be run from the root of an SFDX project" >&2 && exit 1; }
+. scripts/sh/utils/getProjectPackages.sh
 
 if [ ! "$PIPELINE_MODE" ]; then
     args "$0" "$@"
@@ -153,11 +141,11 @@ export PACKAGE_NAME
 export HASH1
 export HASH2
 
-. "$SCRIPTS_DIR"/utils/getFilesToValidate.sh
+. scripts/sh/utils/getFilesToValidate.sh
 
 if [ ! "$PIPELINE_MODE" ]; then
-    . "$SCRIPTS_DIR"/validations/validateProjectVersion.sh
-    . "$SCRIPTS_DIR"/validations/validateFormatting.sh
-    . "$SCRIPTS_DIR"/validations/validatePMD.sh
-    . "$SCRIPTS_DIR"/validations/validateLightningComponents.sh
+    . scripts/sh/validations/validateProjectVersion.sh
+    . scripts/sh/validations/validateFormatting.sh
+    . scripts/sh/validations/validatePMD.sh
+    . scripts/sh/validations/validateLightningComponents.sh
 fi

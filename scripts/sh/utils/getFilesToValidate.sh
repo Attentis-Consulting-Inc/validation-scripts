@@ -3,7 +3,7 @@
 FILES_TO_VALIDATE=
 case "$VALIDATION_MODE" in
     "all")
-        FILES_TO_VALIDATE="."
+        FILES_TO_VALIDATE=$(echo "$PROJECT_PACKAGES" | sed 's| |\\ |g')
         ;;
     "package")
         FILES_TO_VALIDATE="$PACKAGE_NAME"

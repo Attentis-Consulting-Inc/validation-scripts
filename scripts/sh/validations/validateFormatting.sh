@@ -4,8 +4,6 @@
 
 env printf "\e[1;34m-----\n\u279C Checking whitespace\n-----\e[0m\n"
 
-# Validate whitespace and indentation: This is done for the entire project
-
 # Validate no lines with trailing whitespace
 violations=0
 while read -r line; do
@@ -16,7 +14,7 @@ while read -r line; do
     env printf "\e[1;31m\u274C\e[0m Trailing whitespace in %s (line %d)\n" "$filename" "$line_number" >&2
     violations=$((violations + 1))
 done <<EOF1
-$(echo "$FILES_TO_VALIDATE" | xargs grep --extended-regexp "[[:blank:]]+$" --with-filename --only-matching --line-number --recursive --binary-files=without-match --)
+$(echo "$FILES_TO_VALIDATE" | xargs grep --extended-regexp "[[:blank:]]+$" --with-filename --only-matching --line-number --recursive --binary-files=without-match --exclude-from .gitignore --)
 EOF1
 
 # Validate indentation uses only spaces, no tabs or mixed
@@ -28,7 +26,7 @@ while read -r line; do
     env printf "\e[1;31m\u274C\e[0m Tab indentation found in %s (line %d)\n" "$filename" "$line_number" >&2
     violations=$((violations + 1))
 done <<EOF2
-$(echo "$FILES_TO_VALIDATE" | xargs grep --perl '^\s*\t+' --with-filename --only-matching --line-number --recursive --binary-files=without-match --)
+$(echo "$FILES_TO_VALIDATE" | xargs grep --perl '^\s*\t+' --with-filename --only-matching --line-number --recursive --binary-files=without-match --exclude-from .gitignore --)
 EOF2
 
 if [ $violations -eq 0 ]; then

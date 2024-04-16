@@ -5,9 +5,9 @@
 env printf "\e[1;34m-----\n\u279C Running PMD\n-----\e[0m\n"
 
 if [ "$VALIDATION_MODE" = "all" ]; then
-    apex_files=$(find "$SFDX_ROOT" -type f -name "*.cls" -or -name "*.trigger")
+    apex_files=$(find . -type f -name "*.cls" -or -name "*.trigger")
 elif [ "$VALIDATION_MODE" = "package" ]; then
-    apex_files=$(find "$SFDX_ROOT"/"$FILES_TO_VALIDATE" -type f -name "*.cls" -or -name "*.trigger")
+    apex_files=$(find "$PACKAGE_NAME" -type f -name "*.cls" -or -name "*.trigger")
 else
     apex_files=$(echo "$FILES_TO_VALIDATE" | grep --extended-regexp ".*\.(cls|trigger)$" -)
 fi
@@ -18,7 +18,11 @@ pmd_success=true
 
 mkfifo pmd_files.fifo
 echo "$apex_files" >pmd_files.fifo &
-bash "$SFDX_ROOT"/pmd/bin/pmd check --rulesets "$SFDX_ROOT"/pmd/rulesets/apex.xml --format textcolor --no-cache --no-progress --file-list pmd_files.fifo || pmd_success=false
+if [ ! "$(command -v pmd)" ]; then
+    bash pmd/bin/pmd check --rulesets pmd/rulesets/apex.xml --format textcolor --no-cache --no-progress --file-list pmd_files.fifo || pmd_success=false
+else
+    pmd --rulesets pmd/rulesets/apex.xml --format textcolor --no-cache --no-progress --file-list pmd_files.fifo || pmd_success=false
+fi
 
 rm pmd_files.fifo
 if [ $pmd_success = true ]; then

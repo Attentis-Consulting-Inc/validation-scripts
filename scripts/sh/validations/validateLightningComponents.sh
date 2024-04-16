@@ -2,12 +2,13 @@
 
 [ -n "$FILES_TO_VALIDATE" ] || return 0
 
+echo "$FILES_TO_VALIDATE"
 env printf "\e[1;34m-----\n\u279C Running ESLint\n-----\e[0m\n"
 
 if [ "$VALIDATION_MODE" = "all" ]; then
-    lightning_files=$(find "$SFDX_ROOT" -type f -path "$SFDX_ROOT/*/lwc/*/*.js" -or -path "$SFDX_ROOT/*/aura/*/*.js")
+    lightning_files=$(find . -type f -path "*/lwc/*/*.js" -or -path "*/aura/*/*.js")
 elif [ "$VALIDATION_MODE" = "package" ]; then
-    lightning_files=$(find "$SFDX_ROOT"/"$PACKAGE_NAME" -type f -path "$SFDX_ROOT/$PACKAGE_NAME/*/lwc/*/*.js" -or -path "$SFDX_ROOT/$PACKAGE_NAME/*/aura/*/*.js")
+    lightning_files=$(find "$PACKAGE_NAME" -type f -path "$PACKAGE_NAME/*/lwc/*/*.js" -or -path "$PACKAGE_NAME/*/aura/*/*.js")
 else
     lightning_files=$(echo "$FILES_TO_VALIDATE" | grep --extended-regexp ".*/(lwc|aura)/.*.js$" -)
 fi
