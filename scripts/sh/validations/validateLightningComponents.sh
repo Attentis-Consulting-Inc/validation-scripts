@@ -4,8 +4,10 @@
 
 env printf "\e[1;34m-----\n\u279C Running ESLint\n-----\e[0m\n"
 
-if [ "$FILES_TO_VALIDATE" = "force-app" ]; then
-    lightning_files=$(find "$SFDX_ROOT"/force-app -type f -path "$SFDX_ROOT/force-app/*/lwc/*/*.js" -or -path "$SFDX_ROOT/force-app/*/aura/*/*.js")
+if [ "$VALIDATION_MODE" = "all" ]; then
+    lightning_files=$(find . -type f -path "*/lwc/*/*.js" -or -path "*/aura/*/*.js")
+elif [ "$VALIDATION_MODE" = "package" ]; then
+    lightning_files=$(echo "$PACKAGE_NAMES" | sed 's| |\n|g' | xargs -I {} find {} -type f -path "**/lwc/*/*.js" -or -path "**/aura/*/*.js")
 else
     lightning_files=$(echo "$FILES_TO_VALIDATE" | grep --extended-regexp ".*/(lwc|aura)/.*.js$" -)
 fi
@@ -16,6 +18,7 @@ eslint_success=true
 # Validate ES Lint
 echo "$lightning_files" | xargs npx eslint -- || eslint_success=false
 
-[ $eslint_success = false ] && [ "$VALIDATION_MODE" = "merge" ] && return 1
-# # Run jest tests
-# npm run test:unit:coverage || exit 1
+[ $eslint_success = false ] && [ "$PIPELINE_MODE" ] && return 1
+
+# Run jest tests
+npm run test:unit:coverage || exit 1

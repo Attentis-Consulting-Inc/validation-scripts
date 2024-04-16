@@ -4,7 +4,7 @@
 
 env printf "\e[1;34m-----\n\u279C Checking project version\n-----\e[0m\n"
 
-sfdx_version="$(grep '"sourceApiVersion": "\K.*(?=")' "$SFDX_ROOT"/sfdx-project.json -Po)"
+sfdx_version="$(grep '"sourceApiVersion": "\K.*(?=")' sfdx-project.json -Po)"
 env printf "\e[1;33m\u2731\e[0m Project version is v%s\n" "$sfdx_version"
 
 violations=0
