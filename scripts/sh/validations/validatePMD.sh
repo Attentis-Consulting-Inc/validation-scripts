@@ -7,7 +7,7 @@ env printf "\e[1;34m-----\n\u279C Running PMD\n-----\e[0m\n"
 if [ "$VALIDATION_MODE" = "all" ]; then
     apex_files=$(find . -type f -name "*.cls" -or -name "*.trigger")
 elif [ "$VALIDATION_MODE" = "package" ]; then
-    apex_files=$(find "$PACKAGE_NAME" -type f -name "*.cls" -or -name "*.trigger")
+    apex_files=$(echo "$PACKAGE_NAMES" | sed 's| |\n|g' | xargs -I {} find {} -type f -name "*.cls" -or -name "*.trigger")
 else
     apex_files=$(echo "$FILES_TO_VALIDATE" | grep --extended-regexp ".*\.(cls|trigger)$" -)
 fi

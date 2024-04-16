@@ -4,24 +4,25 @@ VALIDATION_MODE=
 parsed_hash=
 
 display_help() {
-    echo "Usage: $(basename "$0") [option] " >&2
+    echo "Usage: $(basename "$0") <option> " >&2
     echo "Run validations on an sfdx project for: Formatting, Prettier, PMD, ESLint, and run Jest tests"
     echo "Options are mutually exclusive and only one may be provided"
     echo
     echo "Options:"
-    echo "   -a, --all (default)                run validations for the entire project"
-    echo "   -p, --package <name>               run validations on <name> package."
-    echo "   -s, --staged                       run validations on staged files"
-    echo "   -c, --commit [<hash>]              run validations on <hash> commit against parent (default: HEAD)"
-    echo "   -d, --diff <hash 1> [<hash 2>]     run validations on the diff between <hash 1> and <hash 2> (default: HEAD)"
+    echo "   -a, --all (default)                        run validations for the entire project"
+    echo "   -p, --package <name> [<name>...]           run validations on one or more packages by <name>"
+    echo "   -s, --staged                               run validations on staged files"
+    echo "   -c, --commit [<hash>]                      run validations on <hash> commit against parent (default: HEAD)"
+    echo "   -d, --diff <hash 1> [<hash 2>]             run validations on the diff between <hash 1> and <hash 2> (default: HEAD)"
     echo
-    echo "   -h, --help                         display this help"
+    echo "   -h, --help                                 display this help"
     exit 1
 }
 
-validate_package() {
-    matching_packages=$(echo "$PROJECT_PACKAGES" | grep "$PACKAGE_NAME" --line-regexp --count --directories=read)
-    [ "$matching_packages" -gt 0 ] || { echo "$PACKAGE_NAME is not a valid package name" >&2 && exit 1; }
+validate_packages() {
+    for package in "$@"; do
+        [ "$(echo "$PROJECT_PACKAGES" | grep "$package" --line-regexp --count --directories=read)" -gt 0 ] || { echo "$package is not a valid package name" >&2 && exit 1; }
+    done
 }
 
 check_if_in_git() {
@@ -90,9 +91,9 @@ args() {
 
     case "$VALIDATION_MODE" in
         "package")
-            [ -n "$1" ] || { echo "--package requires a name to be provided" >&2 && exit 1; }
-            PACKAGE_NAME=$1
-            validate_package
+            [ -n "$1" ] || { echo "--package requires at least one name to be provided" >&2 && exit 1; }
+            validate_packages "$@"
+            PACKAGE_NAMES="$*"
             ;;
         "commit")
             if [ -n "$1" ]; then
@@ -137,7 +138,7 @@ fi
 
 export VALIDATION_MODE
 export COMMIT
-export PACKAGE_NAME
+export PACKAGE_NAMES
 export HASH1
 export HASH2
 

@@ -6,7 +6,7 @@ case "$VALIDATION_MODE" in
         FILES_TO_VALIDATE=$(echo "$PROJECT_PACKAGES" | sed 's| |\\ |g')
         ;;
     "package")
-        FILES_TO_VALIDATE="$PACKAGE_NAME"
+        FILES_TO_VALIDATE="$PACKAGE_NAMES"
         ;;
     "staged")
         FILES_TO_VALIDATE=$(git diff --cached --name-only --diff-filter=AM | sed 's| |\\ |g')
