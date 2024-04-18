@@ -16,15 +16,16 @@ fi
 
 pmd_success=true
 
-mkfifo pmd_files.fifo
-echo "$apex_files" >pmd_files.fifo &
-# if [ -z "$(command -v pmd)" ]; then
-bash pmd/bin/pmd check --rulesets pmd/rulesets/apex.xml --format textcolor --no-cache --no-progress --file-list pmd_files.fifo || pmd_success=false
-# else
-#     pmd --rulesets pmd/rulesets/apex.xml --format textcolor --no-cache --no-progress --file-list pmd_files.fifo || pmd_success=false
-# fi
+temp_pmd_file=/tmp/pmd_files_to_check
+trap "rm -f $temp_pmd_file" EXIT
 
-rm pmd_files.fifo
+echo "$apex_files" >"$temp_pmd_file"
+if [ -z "$(command -v pmd)" ]; then
+    bash pmd/bin/pmd check --rulesets pmd/rulesets/apex.xml --format textcolor --no-cache --no-progress --file-list "$temp_pmd_file" || pmd_success=false
+else
+    pmd --rulesets pmd/rulesets/apex.xml --format textcolor --no-cache --no-progress --file-list "$temp_pmd_file" || pmd_success=false
+fi
+
 if [ $pmd_success = true ]; then
     env printf "\e[1;32m\u2713\e[0m PMD found no violations"
     return 0
