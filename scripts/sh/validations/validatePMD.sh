@@ -18,11 +18,11 @@ pmd_success=true
 
 mkfifo pmd_files.fifo
 echo "$apex_files" >pmd_files.fifo &
-if [ -z "$(command -v pmd)" ]; then
-    bash pmd/bin/pmd check --rulesets pmd/rulesets/apex.xml --format textcolor --no-cache --no-progress --file-list pmd_files.fifo || pmd_success=false
-else
-    pmd --rulesets pmd/rulesets/apex.xml --format textcolor --no-cache --no-progress --file-list pmd_files.fifo || pmd_success=false
-fi
+# if [ -z "$(command -v pmd)" ]; then
+bash pmd/bin/pmd check --rulesets pmd/rulesets/apex.xml --format textcolor --no-cache --no-progress --file-list pmd_files.fifo || pmd_success=false
+# else
+#     pmd --rulesets pmd/rulesets/apex.xml --format textcolor --no-cache --no-progress --file-list pmd_files.fifo || pmd_success=false
+# fi
 
 rm pmd_files.fifo
 if [ $pmd_success = true ]; then
