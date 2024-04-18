@@ -27,7 +27,7 @@ else
 fi
 
 if [ $pmd_success = true ]; then
-    env printf "\e[1;32m\u2713\e[0m PMD found no violations"
+    env printf "\e[1;32m\u2713\e[0m PMD found no violations\n"
     return 0
 else
     return 1
