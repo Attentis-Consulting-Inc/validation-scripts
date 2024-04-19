@@ -127,7 +127,8 @@ args() {
 }
 
 [ -f sfdx-project.json ] || { echo "Must be run from the root of an SFDX project" >&2 && exit 1; }
-. scripts/sh/utils/getProjectPackages.sh
+UTILS_DIR=scripts/sh/utils
+. "$UTILS_DIR"/getProjectPackages
 
 if [ ! "$PIPELINE_MODE" ]; then
     args "$0" "$@"
@@ -142,11 +143,11 @@ export PACKAGE_NAMES
 export HASH1
 export HASH2
 
-. scripts/sh/utils/getFilesToValidate.sh
+. "$UTILS_DIR"/getFilesToValidate
 
 if [ ! "$PIPELINE_MODE" ]; then
-    . scripts/sh/validations/validateProjectVersion.sh
-    . scripts/sh/validations/validateFormatting.sh
-    . scripts/sh/validations/validatePMD.sh
-    . scripts/sh/validations/validateLightningComponents.sh
+    . "$UTILS_DIR"/validateProjectVersion
+    . "$UTILS_DIR"/validateFormatting
+    . "$UTILS_DIR"/validatePMD
+    . "$UTILS_DIR"/validateLightningComponents
 fi
