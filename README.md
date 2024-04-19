@@ -81,4 +81,46 @@ bash`, usually included when installing `git` in Windows, and easily
 
 ## Usage
 
-TODO
+Get the latest release zip file from [here](https://github.com/Attentis-Consulting-Inc/validation-scripts/releases/latest) and unzip it into the root of an
+sfdx project. This will create the following file structure (or add to an
+existing one) in the project:
+
+    .
+    └── scripts
+        └── sh
+            ├── validate
+            └── .validate_utils
+                ├── getFilesToValidate
+                ├── getProjectPackages
+                ├── validateAgainstOrg
+                ├── validateFormatting
+                ├── validateLightningComponents
+                ├── validatePMD
+                └── validateProjectVersion
+
+From within a UNIX shell, run the following command from the root of the
+project:
+
+    sh scripts/sh/validate <option>
+
+where `<option>` determines the set of files on which validations will be run.
+A complete list of options and what each does can be seen in the scripts's help:
+
+    sh scripts/sh/validate --help
+
+    Usage: validate <option>
+    Run validations on an sfdx project for: Formatting, Prettier, PMD, ESLint, and run Jest tests
+    Options are mutually exclusive and only one may be provided
+
+    Options:
+       -a, --all (default)                        run validations for the entire project
+       -p, --package <name> [<name>...]           run validations on one or more packages by <name>
+       -s, --staged                               run validations on staged files
+       -c, --commit [<hash>]                      run validations on <hash> commit against parent (default: HEAD)
+       -d, --diff <hash 1> [<hash 2>]             run validations on the diff between <hash 1> and <hash 2> (default: HEAD)
+
+       -h, --help                                 display this help
+
+**Note:** Validations are always run against the working tree version of each
+file, and options such as `staged`, `commit`, and `diff` only determine which
+files validations are run for.

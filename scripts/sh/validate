@@ -127,7 +127,7 @@ args() {
 }
 
 [ -f sfdx-project.json ] || { echo "Must be run from the root of an SFDX project" >&2 && exit 1; }
-UTILS_DIR=scripts/sh/utils
+UTILS_DIR=scripts/sh/.validate_utils
 . "$UTILS_DIR"/getProjectPackages
 
 if [ ! "$PIPELINE_MODE" ]; then
