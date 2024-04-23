@@ -1,7 +1,16 @@
 # SFDX project validation scripts
 
 Shell scripts with a single entry point for performing a series of code quality
-validations on an SFDX project.
+validations on an SFDX project. These validations are:
+
+- [Prettier](https://prettier.io/) code formatting, according to the project's
+  local `prettierrc` and `prettierignore` files
+- No trailing whitespace
+- Space-based indentation only
+- [PMD](https://pmd.github.io/) static code analysis on all apex files
+- [ESLint](https://eslint.org/) static code analysis on all javascript files for
+  Aura and LWC components
+- Run all [Jest](https://jestjs.io/) tests for LWC components
 
 ## Prerequisites
 
