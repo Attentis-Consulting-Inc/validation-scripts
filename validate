@@ -1,7 +1,8 @@
 #!/bin/sh
 
-VALIDATION_MODE=
+this_dir=$(cd -- "$(dirname -- "$0")" >/dev/null && pwd)
 parsed_hash=
+validation_mode=
 
 display_help() {
     echo "Usage: $(basename "$0") <option> " >&2
@@ -19,59 +20,49 @@ display_help() {
     exit 1
 }
 
-validate_packages() {
-    for package in "$@"; do
-        [ "$(echo "$PROJECT_PACKAGES" | grep "$package" --line-regexp --count --directories=read)" -gt 0 ] || { echo "$package is not a valid package name" >&2 && exit 1; }
-    done
-}
-
 check_if_in_git() {
-    GIT_ROOT=$(git rev-parse --show-toplevel 2>&1)
-    [ -d "$GIT_ROOT" ] || { echo "Not in a git repository" >&2 && exit 1; }
+    git rev-parse --show-toplevel >/dev/null 2>&1 || { echo "Not in a git repository" >&2 && exit 1; }
 }
 
 validate_commit() {
     parsed_hash=$(git rev-parse --short "$1" 2>/dev/null) || return 1
 }
 
-validate_diff() {
-    (git merge-base --is-ancestor "$1" "$2" 2>/dev/null) || return 1
-}
-
 validate_exclusive_options() {
-    [ -z $VALIDATION_MODE ] || { echo "Only one option may be provided" >&2 && echo && display_help; }
+    [ -z $validation_mode ] || { echo "Only one option may be provided" >&2 && echo && display_help; }
 }
 
 args() {
+    # Parse flags
     options=$(getopt -o apscdh --long 'all,package,staged,commit,diff,help' -- "$@") || exit 1
     eval set -- "$options"
     while true; do
         case "$1" in
             -a | --all)
                 validate_exclusive_options
-                VALIDATION_MODE="all"
+                validation_mode="all"
                 shift
                 ;;
             -p | --package)
                 validate_exclusive_options
-                VALIDATION_MODE="package"
+                validation_mode="package"
                 shift
                 ;;
             -s | --staged)
                 validate_exclusive_options
                 check_if_in_git
-                VALIDATION_MODE="staged"
+                validation_mode="staged"
                 shift
                 ;;
             -c | --commit)
                 validate_exclusive_options
-                VALIDATION_MODE="commit"
+                validation_mode="commit"
                 check_if_in_git
                 shift
                 ;;
             -d | --diff)
                 validate_exclusive_options
-                VALIDATION_MODE="diff"
+                validation_mode="diff"
                 check_if_in_git
                 shift
                 ;;
@@ -87,13 +78,16 @@ args() {
 
     shift
 
-    [ -n "$VALIDATION_MODE" ] || VALIDATION_MODE="all"
+    [ -n "$validation_mode" ] || validation_mode="all"
 
-    case "$VALIDATION_MODE" in
+    # Validate flag parameters
+    case "$validation_mode" in
         "package")
             [ -n "$1" ] || { echo "--package requires at least one name to be provided" >&2 && exit 1; }
-            validate_packages "$@"
-            PACKAGE_NAMES="$*"
+            for package in "$@"; do
+                [ "$(echo "$project_packages" | grep "$package" --line-regexp --count --directories=read)" -gt 0 ] || { echo "$package is not a valid package name" >&2 && exit 1; }
+            done
+            selected_packages="$*"
             ;;
         "commit")
             if [ -n "$1" ]; then
@@ -102,9 +96,9 @@ args() {
                 hash="HEAD"
             fi
             validate_commit "$hash" || { echo "$hash is not a valid commit hash" >&2 && exit 1; }
-            COMMIT="$parsed_hash"
-            if [ ! "$(git rev-parse --short "$COMMIT^1" 2>/dev/null)" ]; then
-                echo "$COMMIT does not have a parent to validate against" >&2
+            commit="$parsed_hash"
+            if [ ! "$(git rev-parse --short "$commit^1" 2>/dev/null)" ]; then
+                echo "$commit does not have a parent to validate against" >&2
                 exit 1
             fi
             ;;
@@ -117,37 +111,51 @@ args() {
                 hash_2=$(git rev-parse --short HEAD)
             fi
             validate_commit "$hash" || { echo "$hash is not a valid commit hash" >&2 && exit 1; }
-            HASH1="$parsed_hash"
+            hash_1="$parsed_hash"
             validate_commit "$hash_2" || { echo "$hash_2 is not a valid commit hash" >&2 && exit 1; }
-            HASH2="$parsed_hash"
-            validate_diff "$HASH1" "$HASH2"
+            hash_2="$parsed_hash"
+            (git merge-base --is-ancestor "$hash_1" "$hash_2" 2>/dev/null) || { echo "$hash_2 is not an ancestor of $hash_1" >&2 && exit 1; }
             ;;
 
     esac
 }
 
+# Get all sfdx project packages
 [ -f sfdx-project.json ] || { echo "Must be run from the root of an SFDX project" >&2 && exit 1; }
-UTILS_DIR=scripts/sh/.validate_utils
-. "$UTILS_DIR"/getProjectPackages
+project_packages="$(jq .packageDirectories[].path sfdx-project.json | sed 's/"//g')"
+
+# Get set of files to validate
+fileset=
+case "$validation_mode" in
+    "all")
+        fileset=$(echo "$project_packages" | sed 's| |\\ |g')
+        ;;
+    "package")
+        fileset="$selected_packages"
+        ;;
+    "staged")
+        fileset=$(git diff --cached --name-only --diff-filter=AM | sed 's| |\\ |g')
+        ;;
+    "commit")
+        fileset=$(git diff --name-only --diff-filter=AM "$commit"^1.."$commit" | sed 's| |\\ |g')
+        ;;
+    "diff")
+        fileset=$(git diff --name-only --diff-filter=AM "$hash_1".."$hash_2" | sed 's| |\\ |g')
+        ;;
+esac
+
+utils_dir="$this_dir"/.utils
 
 if [ ! "$PIPELINE_MODE" ]; then
     args "$0" "$@"
 else
-    VALIDATION_MODE="commit"
-    COMMIT="HEAD"
+    validation_mode="commit"
+    commit="HEAD"
 fi
 
-export VALIDATION_MODE
-export COMMIT
-export PACKAGE_NAMES
-export HASH1
-export HASH2
-
-. "$UTILS_DIR"/getFilesToValidate
-
 if [ ! "$PIPELINE_MODE" ]; then
-    . "$UTILS_DIR"/validateProjectVersion
-    . "$UTILS_DIR"/validateFormatting
-    . "$UTILS_DIR"/validatePMD
-    . "$UTILS_DIR"/validateLightningComponents
+    . "$utils_dir"/projectVersion
+    . "$utils_dir"/formatting
+    . "$utils_dir"/pmd
+    . "$utils_dir"/lightning
 fi
