@@ -1,0 +1,30 @@
+#!/bin/sh
+#
+# Run Jest on a set of lightning web components
+# Arguments:
+#       the set of filepaths or directories to check
+#       (optional) a list of files or directories to ignore
+#       (optional) "directories"/"files" indicating if the first argument are directories to search, or filepaths containing files to check
+#
+# If passed a set of directories, all tests found within those directories will be run. If passed a set of files, any file passed corresponding to an lwc component will cause all of those components' test to run, if any.
+
+[ -n "$1" ] || return 0
+mode="files"
+[ -n "$3" ] && mode="$3"
+
+ignore_files=
+if [ -n "$2" ]; then
+    ignore_files=$(echo "$2" | sed 's|^|<rootDir>/|' | sed 's|$|/*|')
+fi
+
+env printf "\e[1;34m-----\n\u279C Running Jest tests\n-----\e[0m\n"
+
+if [ "$mode" = "directories" ]; then
+    roots=$(echo "$1" | sed 's| |\n|g')
+elif [ "$mode" = "files" ]; then
+    # test_files=$(echo "$1" | grep --extended-regexp ".*/(lwc|aura)/.*.js$" -)
+fi
+#
+# sfdx-lwc-jest --coverage -- --coveragePathIgnorePatterns force-app/main/default/lwc/entitySearch/entitySearch.js force-app/main/default/lwc/entityDetails/entityDetails.js force-app/main/default/lwc/apiDataFetcher/apiDataFetcher.js
+#
+# sfdx-lwc-jest --coverage -- --coveragePathIgnorePatterns force-app/main/default/lwc/entitySearch/*.js force-app/main/default/lwc/entityDetails/*.js

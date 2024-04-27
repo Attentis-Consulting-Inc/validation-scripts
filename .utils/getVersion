@@ -1,0 +1,6 @@
+#!/bin/sh
+#
+# Returns the Salesforce API version listed in the project definition
+
+[ -f sfdx-project.json ] || { echo "Must be run from the root of an SFDX project" >&2 && return 1; }
+grep '"sourceApiVersion": "\K.*(?=")' sfdx-project.json -Po

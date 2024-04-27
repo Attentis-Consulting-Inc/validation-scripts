@@ -1,9 +1,5 @@
 #!/bin/sh
 
-this_dir=$(cd -- "$(dirname -- "$0")" >/dev/null && pwd)
-parsed_hash=
-validation_mode=
-
 display_help() {
     echo "Usage: $(basename "$0") <option> " >&2
     echo "Run validations on an sfdx project for: Formatting, Prettier, PMD, ESLint, and run Jest tests"
@@ -28,13 +24,17 @@ validate_commit() {
     parsed_hash=$(git rev-parse --short "$1" 2>/dev/null) || return 1
 }
 
+validate_parent() {
+    (git rev-parse --short "$1^1" >/dev/null 2>&1) || { echo "$1 does not have a parent to validate against" >&2 && exit 1; }
+}
+
 validate_exclusive_options() {
     [ -z $validation_mode ] || { echo "Only one option may be provided" >&2 && echo && display_help; }
 }
 
 args() {
     # Parse flags
-    options=$(getopt -o apscdh --long 'all,package,staged,commit,diff,help' -- "$@") || exit 1
+    options=$(getopt -o apscdhw --long 'all,package,staged,commit,diff,help,pipeline' -- "$@") || exit 1
     eval set -- "$options"
     while true; do
         case "$1" in
@@ -63,6 +63,12 @@ args() {
             -d | --diff)
                 validate_exclusive_options
                 validation_mode="diff"
+                check_if_in_git
+                shift
+                ;;
+            -w | --pipeline)
+                validate_exclusive_options
+                validation_mode="pipeline"
                 check_if_in_git
                 shift
                 ;;
@@ -97,10 +103,11 @@ args() {
             fi
             validate_commit "$hash" || { echo "$hash is not a valid commit hash" >&2 && exit 1; }
             commit="$parsed_hash"
-            if [ ! "$(git rev-parse --short "$commit^1" 2>/dev/null)" ]; then
-                echo "$commit does not have a parent to validate against" >&2
-                exit 1
-            fi
+            validate_parent "$commit"
+            ;;
+        "pipeline")
+            commit=$(git rev-parse --short "HEAD" 2>/dev/null)
+            validate_parent "$commit"
             ;;
         "diff")
             [ -n "$1" ] || { echo "--diff requires at least one commit hash" >&2 && exit 1; }
@@ -120,15 +127,23 @@ args() {
     esac
 }
 
-# Get all sfdx project packages
-[ -f sfdx-project.json ] || { echo "Must be run from the root of an SFDX project" >&2 && exit 1; }
-project_packages="$(jq .packageDirectories[].path sfdx-project.json | sed 's/"//g')"
+this_dir=$(cd -- "$(dirname -- "$0")" >/dev/null && pwd)
+utils_dir="$this_dir"/.utils
+validations_dir="$this_dir"/.validations
+parsed_hash=
+validation_mode=
+
+[ -f sfdx-project.json ] || { echo "Must be run from the root of an SFDX project" >&2 && return 1; }
+project_packages="$(/bin/sh "$utils_dir"/getPackages)"
+
+# Parse arguments
+args "$0" "$@"
 
 # Get set of files to validate
 fileset=
 case "$validation_mode" in
     "all")
-        fileset=$(echo "$project_packages" | sed 's| |\\ |g')
+        fileset="$project_packages"
         ;;
     "package")
         fileset="$selected_packages"
@@ -136,7 +151,7 @@ case "$validation_mode" in
     "staged")
         fileset=$(git diff --cached --name-only --diff-filter=AM | sed 's| |\\ |g')
         ;;
-    "commit")
+    "commit" | "pipeline")
         fileset=$(git diff --name-only --diff-filter=AM "$commit"^1.."$commit" | sed 's| |\\ |g')
         ;;
     "diff")
@@ -144,18 +159,23 @@ case "$validation_mode" in
         ;;
 esac
 
-utils_dir="$this_dir"/.utils
+[ -n "$fileset" ] || { env printf "\e[1;33m\uff01\e[0m No files to check\n" && exit 0; }
 
-if [ ! "$PIPELINE_MODE" ]; then
-    args "$0" "$@"
+if [ "$validation_mode" = "pipeline" ]; then
+    echo "$fileset"
 else
-    validation_mode="commit"
-    commit="HEAD"
-fi
+    sfdx_version="$(/bin/sh "$utils_dir"/getVersion)"
+    omnistudio_components="$(/bin/sh "$utils_dir"/getOmnistudio)"
+    if [ "$validation_mode" = "all" ] || [ "$validation_mode" = "package" ]; then
+        find_mode="directories"
+    else
+        find_mode="files"
+    fi
 
-if [ ! "$PIPELINE_MODE" ]; then
-    . "$utils_dir"/projectVersion
-    . "$utils_dir"/formatting
-    . "$utils_dir"/pmd
-    . "$utils_dir"/lightning
+    # /bin/sh "$validations_dir"/version "$sfdx_version" "$fileset" "$omnistudio_components"
+    # /bin/sh "$validations_dir"/whitespace "$fileset" "$omnistudio_components"
+    # /bin/sh "$validations_dir"/prettier "$fileset" "$omnistudio_components"
+    # /bin/sh "$validations_dir"/pmd "$fileset" "$find_mode"
+    # /bin/sh "$validations_dir"/eslint "$fileset" "$omnistudio_components" "$find_mode"
+    /bin/sh "$validations_dir"/jest "$fileset" "$find_mode"
 fi
