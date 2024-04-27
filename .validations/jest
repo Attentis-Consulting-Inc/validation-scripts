@@ -22,9 +22,12 @@ env printf "\e[1;34m-----\n\u279C Running Jest tests\n-----\e[0m\n"
 if [ "$mode" = "directories" ]; then
     roots=$(echo "$1" | sed 's| |\n|g')
 elif [ "$mode" = "files" ]; then
-    # test_files=$(echo "$1" | grep --extended-regexp ".*/(lwc|aura)/.*.js$" -)
+    roots=$(echo "$1" | grep "/lwc/" | sed 's|/lwc/\([^/]*\).*|/lwc/\1|' | uniq)
 fi
-#
-# sfdx-lwc-jest --coverage -- --coveragePathIgnorePatterns force-app/main/default/lwc/entitySearch/entitySearch.js force-app/main/default/lwc/entityDetails/entityDetails.js force-app/main/default/lwc/apiDataFetcher/apiDataFetcher.js
-#
-# sfdx-lwc-jest --coverage -- --coveragePathIgnorePatterns force-app/main/default/lwc/entitySearch/*.js force-app/main/default/lwc/entityDetails/*.js
+
+[ -n "$roots" ] || { env printf "\e[1;32m\u2713\e[0m No Jest tests to run\n" && return 0; }
+
+roots_flag=$(echo "$roots" | xargs echo '--roots')
+flags=$(echo "$ignore_files" | xargs echo "$roots_flag --coveragePathIgnorePatterns")
+
+echo "$flags" | xargs npm run test:unit:coverage -- -- || return 1
