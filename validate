@@ -130,13 +130,24 @@ args() {
 this_dir=$(cd -- "$(dirname -- "$0")" >/dev/null && pwd)
 utils_dir="$this_dir"/.utils
 validations_dir="$this_dir"/.validations
-parsed_hash=
-validation_mode=
 
+# Guard for required commands and files
 [ -f sfdx-project.json ] || { echo "Must be run from the root of an SFDX project" >&2 && return 1; }
-project_packages="$(/bin/sh "$utils_dir"/getPackages)"
+valid_reqs=true
+[ "$(command -v jq)" ] || { echo "Cannot find jq." >&2 && valid_reqs=false; }
+[ "$(command -v npm)" ] || { echo "Cannot find npm." >&2 && valid_reqs=false; }
+{ [ -n "$(npm ls -p prettier)" ] && [ -n "$(npm ls -p prettier-plugin-apex)" ]; } || { echo "Cannot find Prettier or its Apex plugin." >&2 && valid_reqs=false; }
+[ "$(command -v pmd)" ] || [ -f pmd/bin/pmd ] || { echo "Cannot find the pmd binary." >&2 && valid_reqs=false; }
+[ -f pmd/rulesets/apex.xml ] || { echo "Cannot find the apex ruleset for pmd at the expected location." >&2 && valid_reqs=false; }
+{ [ -n "$(npm ls -p eslint)" ] && [ -n "$(npm ls -p @lwc/eslint-plugin-lwc)" ] && [ -n "$(npm ls -p @salesforce/eslint-config-lwc)" ] && [ -n "$(npm ls -p @salesforce/eslint-plugin-aura)" ] && [ -n "$(npm ls -p @salesforce/eslint-plugin-lightning)" ]; } || { echo "Cannot find ESLint or the Salesforce plugins." >&2 && valid_reqs=false; }
+[ -n "$(npm ls -p @salesforce/sfdx-lwc-jest)" ] || { echo "Cannot find the Salesforce Jest package." >&2 && valid_reqs=false; }
+
+[ $valid_reqs = true ] || { echo "" && echo "Some prerequisites not met. Please follow the setup instructions on the repository" >&2 && exit 1; }
 
 # Parse arguments
+parsed_hash=
+validation_mode=
+project_packages="$(/bin/sh "$utils_dir"/getPackages)"
 args "$0" "$@"
 
 # Get set of files to validate
