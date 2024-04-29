@@ -17,16 +17,16 @@ validations on an SFDX project. These validations are:
 The `validate` script has a few prerequisites you should check to make sure it
 runs properly:
 
-1.  It must be run from within a UNIX shell. If in Windows, this can be `git
+1. It must be run from within a UNIX shell. If in Windows, this can be `git
 bash`, usually included when installing `git` in Windows, and easily
     accessible from VSCode. If in Linux or Mac, this is your regular shell.
-2.  [Prettier](https://prettier.io/) and [the Apex
+2. [Prettier](https://prettier.io/) and [the Apex
     plugin](https://www.npmjs.com/package/prettier-plugin-apex), both can be
     installed using:
 
         npm install -D prettier prettier-plugin-apex
 
-3.  [Jest](https://jestjs.io/) and the
+3. [Jest](https://jestjs.io/) and the
     [sfdx-lwc-jest](https://github.com/salesforce/sfdx-lwc-jest) wrapper. This
     can be set up using:
 
@@ -36,7 +36,7 @@ bash`, usually included when installing `git` in Windows, and easily
 
         sfdx force:lightning:lwc:test:setup
 
-4.  [jq](https://github.com/jqlang/jq), required to parse through the
+4. [jq](https://github.com/jqlang/jq), required to parse through the
     `sfdx-project.json` project definition. You can check if `jq` is available on
     your shell using
 
@@ -63,59 +63,59 @@ bash`, usually included when installing `git` in Windows, and easily
 
               sudo dnf install jq
 
-5.  [PMD](https://pmd.github.io/) must be placed as a binary in the project
+5. [PMD](https://pmd.github.io/) must be placed as a binary in the project
     directory under the name `./pmd`, along with a valid apex ruleset. To do this:
 
-    1.  Download PMD using
+    1. Download PMD using
 
              curl -LO https://github.com/pmd/pmd/releases/download/pmd_releases%2F7.0.0/pmd-dist-7.0.0-bin.zip
 
-    2.  Unzip it:
+    2. Unzip it:
 
              unzip pmd-dist-7.0.0-bin.zip
 
-    3.  Rename the extracted directory:
+    3. Rename the extracted directory:
 
              mv pmd-bin-7.0.0 pmd
 
-    4.  Create a `rulesets` subdirectory:
+    4. Create a `rulesets` subdirectory:
 
              mkdir pmd/rulesets
 
-    5.  Download the Attentis Apex ruleset into this subdirectory:
+    5. Download the Attentis Apex ruleset into this subdirectory:
 
-             curl -L
-             https://raw.githubusercontent.com/Attentis-Consulting-Inc/pmd/main/ruleset.xml
-             -o pmd/rulesets/apex.xml
+         ```
+         curl -L https://raw.githubusercontent.com/Attentis-Consulting-Inc/pmd/main/ruleset.xml -o pmd/rulesets/apex.xml
+         ```
 
 ## Usage
 
-Get the latest release zip file from [here](https://github.com/Attentis-Consulting-Inc/validation-scripts/releases/latest) and unzip it into the root of an
-sfdx project. This will create the following file structure (or add to an
-existing one) in the project:
+Get the latest release zip file from [here](https://github.com/Attentis-Consulting-Inc/validation-scripts/releases/latest/validation_scripts.zip) and unzip it into an
+sfdx project. The zip file contains the following file structure:
 
     .
-    └── scripts
-        └── sh
-            ├── validate
-            └── .validate_utils
-                ├── getFilesToValidate
-                ├── getProjectPackages
-                ├── validateAgainstOrg
-                ├── validateFormatting
-                ├── validateLightningComponents
-                ├── validatePMD
-                └── validateProjectVersion
+    ├── validate
+    ├── .utils
+    │   ├── getOmnistudio
+    │   ├── getPackages
+    │   └── getVersion
+    └── .validations
+        ├── eslint
+        ├── jest
+        ├── pmd
+        ├── prettier
+        ├── version
+        └── whitespace
 
 From within a UNIX shell, run the following command from the root of the
 project:
 
-    sh scripts/sh/validate <option>
+    sh path/to/validate <option>
 
 where `<option>` determines the set of files on which validations will be run.
 A complete list of options and what each does can be seen in the scripts's help:
 
-    sh scripts/sh/validate --help
+    sh path/to/validate --help
 
     Usage: validate <option>
     Run validations on an sfdx project for: Formatting, Prettier, PMD, ESLint, and run Jest tests
