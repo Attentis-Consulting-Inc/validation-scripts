@@ -6,7 +6,7 @@
 #       A list of files or directories to check.
 #       (optional) a list of files or directories to ignore
 
-[ -n "$1" ] || [ -n "$2" ] || { echo "Not enough arguments provided" >&2 && return 1; }
+[ -n "$1" ] || [ -n "$2" ] || { echo "Not enough arguments provided" >&2 && exit 1; }
 
 temp_ignore_file=/tmp/formatting_ignore_file
 trap "rm -f $temp_ignore_file" EXIT
@@ -36,5 +36,5 @@ if [ $violations -eq 0 ]; then
     env printf "\e[1;32m\u2713\e[0m All files match project version\n"
 else
     env printf "\n\e[1;31m\xE2\x9D\x8C %s total project verion problems\e[0m\n" "$violations" >&2
-    return 1
+    exit 1
 fi

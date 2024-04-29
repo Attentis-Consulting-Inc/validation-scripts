@@ -5,7 +5,7 @@
 #       Set of files to check
 #       (optional) a list of files or directories to ignore
 
-[ -n "$1" ] || return 0
+[ -n "$1" ] || exit 0
 
 # If prettier and the apex plugin are not installed, install them
 { [ -n "$(npm ls -p prettier)" ] && [ -n "$(npm ls -p prettier-plugin-apex)" ]; } || { env printf "\e[1;34m-----\n\u279C Prettier not installed, installing\n-----\e[0m\n" && npm install prettier prettier-plugin-apex; }
@@ -19,4 +19,4 @@ echo "*.xml" >>"$temp_ignore_file"
 echo "*.svg" >>"$temp_ignore_file"
 sed -i 's|$|/**/*|' "$temp_ignore_file"
 
-echo "$1" | xargs npx prettier --check --ignore-unknown --ignore-path "$temp_ignore_file" --ignore-path .prettierignore --ignore-path .gitignore || return 1
+echo "$1" | xargs npx prettier --check --ignore-unknown --ignore-path "$temp_ignore_file" --ignore-path .prettierignore --ignore-path .gitignore || exit 1

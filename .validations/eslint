@@ -6,7 +6,7 @@
 #       (optional) a list of files or directories to ignore
 #       (optional) "directories"/"files" indicating if the first argument are directories to search, or filepaths containing files to check
 
-[ -n "$1" ] || return 0
+[ -n "$1" ] || exit 0
 mode="files"
 [ -n "$3" ] && mode="$3"
 
@@ -24,14 +24,14 @@ elif [ "$mode" = "files" ]; then
 fi
 
 files_to_check=$(echo "$lightning_files" | grep --invert-match --file="$temp_ignore_file" --)
-[ -n "$files_to_check" ] || { env printf "\e[1;32m\u2713\e[0m No files for ESLint to check\n" && return 0; }
+[ -n "$files_to_check" ] || { env printf "\e[1;32m\u2713\e[0m No files for ESLint to check\n" && exit 0; }
 
 eslint_success=true
 echo "$files_to_check" | xargs npx eslint -- || eslint_success=false
 
 if [ $eslint_success = true ]; then
     env printf "\e[1;32m\u2713\e[0m All files pass ESLint\n"
-    return 0
+    exit 0
 else
-    return 1
+    exit 1
 fi

@@ -8,7 +8,7 @@
 #
 # If passed a set of directories, all tests found within those directories will be run. If passed a set of files, any file passed corresponding to an lwc component will cause all of those components' test to run, if any.
 
-[ -n "$1" ] || return 0
+[ -n "$1" ] || exit 0
 mode="files"
 [ -n "$3" ] && mode="$3"
 
@@ -25,9 +25,9 @@ elif [ "$mode" = "files" ]; then
     roots=$(echo "$1" | grep "/lwc/" | sed 's|/lwc/\([^/]*\).*|/lwc/\1|' | uniq)
 fi
 
-[ -n "$roots" ] || { env printf "\e[1;32m\u2713\e[0m No Jest tests to run\n" && return 0; }
+[ -n "$roots" ] || { env printf "\e[1;32m\u2713\e[0m No Jest tests to run\n" && exit 0; }
 
 roots_flag=$(echo "$roots" | xargs echo '--roots')
 flags=$(echo "$ignore_files" | xargs echo "$roots_flag --coveragePathIgnorePatterns")
 
-echo "$flags" | xargs npm run test:unit:coverage -- -- || return 1
+echo "$flags" | xargs npm run test:unit:coverage -- -- --passWithNoTests || exit 1

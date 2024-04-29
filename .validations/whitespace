@@ -6,7 +6,7 @@
 #       A list of files or directories to check
 #       (optional) a list of files or directories to ignore
 
-[ -n "$1" ] || return 0
+[ -n "$1" ] || exit 0
 
 temp_ignore_file=/tmp/whitespace_ignore_file
 trap "rm -f $temp_ignore_file" EXIT
@@ -59,4 +59,4 @@ else
     env printf "\n\e[1;31m\xE2\x9D\x8C %s total tab indentation problems\e[0m\n" "$indentation_violations" >&2
 fi
 
-[ $violations -eq 0 ] || return 1
+[ $violations -eq 0 ] || exit 1
