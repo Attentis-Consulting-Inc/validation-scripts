@@ -88,6 +88,60 @@ bash`, usually included when installing `git` in Windows, and easily
          curl -L https://raw.githubusercontent.com/Attentis-Consulting-Inc/pmd/main/ruleset.xml -o pmd/rulesets/apex.xml
          ```
 
+### Ignoring Omnistudio LWCs from Jest coverage
+
+Since Omnistudio auto-generated LWCs do not contain Jest tests, these may
+negatively affect Jest test results, especially when using the `coverageThreshold`
+property in the Jest configuration. Ignoring these in the scripts themselves may
+result in the commands to fail if too many of these paths must be concatenated.
+
+As an alternative, these can be safely ignored directly in the `jest.config.js`
+file, as follows:
+
+1. Create an `omnistudio-components.json` file in the project root. This file
+   also serves to indicate the validation scripts to ignore the auto-generated
+components in other validations. This file should be a JSON encoded string,
+where the top-level keys are the SFDX project's packages, each mapping to an
+array of names of auto-generated LWCs that can be found inside that package.
+For example, if the project consists of 2 packages named `base-app` (containing
+the auto-generated component `cfFlexcard`) and
+`additional-app` (containing the components `cfOtherFlexcard` and
+`omniscriptEnglish`), then the file should look like:
+
+        {
+            "base-app": [ "cfFlexcard" ],
+            "additional-app": [
+                "cfOtherFlexcard",
+                "omniscriptEnglish"
+            ]
+        }
+
+2. Add the following snippet into your `jest.config.js` file, right after the
+   imports:
+
+        
+        let omnistudioComponents;
+        try {
+          omnistudioComponents = require('./omnistudio-components.json');
+        } catch {
+          omnistudioComponents = {};
+        }
+
+        const ignorePaths = [];
+        Object.entries(omnistudioComponents).forEach(([app, components]) => {
+          const rootPath = `<rootDir>/${app}/main/default/lwc/`;
+          components.forEach((component) => {
+            ignorePaths.push(`${rootPath}${component}/`);
+          })
+        });
+
+3. In the same file's `module.exports`, add the following key and value pair:
+
+        coveragePathIgnorePatterns: [...ignorePaths]
+
+    If your file already contains the key and is ignoring some paths, simply add
+    to those.
+
 ## Usage
 
 Get the latest release zip file from [here](https://github.com/Attentis-Consulting-Inc/validation-scripts/releases/download/latest/validation_scripts.zip) and unzip it into an
