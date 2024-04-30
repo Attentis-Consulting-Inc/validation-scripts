@@ -90,7 +90,7 @@ bash`, usually included when installing `git` in Windows, and easily
 
 ## Usage
 
-Get the latest release zip file from [here](https://github.com/Attentis-Consulting-Inc/validation-scripts/releases/latest/validation_scripts.zip) and unzip it into an
+Get the latest release zip file from [here](https://github.com/Attentis-Consulting-Inc/validation-scripts/releases/download/latest/validation_scripts.zip) and unzip it into an
 sfdx project. The zip file contains the following file structure:
 
     .
