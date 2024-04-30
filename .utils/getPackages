@@ -1,0 +1,6 @@
+#!/bin/sh
+#
+# Returns a list of all packages listed in a Salesforce project definition
+
+[ -f sfdx-project.json ] || { echo "Must be run from the root of an SFDX project" >&2 && exit 1; }
+jq .packageDirectories[].path sfdx-project.json | sed 's/"//g' | sed 's| |\\ |g'

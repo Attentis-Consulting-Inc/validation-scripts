@@ -1,0 +1,39 @@
+#!/bin/sh
+#
+# Validate a set of files with pmd
+# Arguments:
+#       the set of filepaths or directories to check
+#       (optional) "directories"/"files" indicating if the first argument are directories to search, or filepaths containing files to check
+
+[ -n "$1" ] || exit 0
+mode="files"
+[ -n "$2" ] && mode="$2"
+
+env printf "\e[1;34m-----\n\u279C Running PMD\n-----\e[0m\n"
+
+if [ "$mode" = "directories" ]; then
+    apex_files=$(echo "$1" | sed 's| |\n|g' | xargs -I {} find {} -type f -name "*.cls" -or -name "*.trigger")
+elif [ "$mode" = "files" ]; then
+    apex_files=$(echo "$1" | grep --extended-regexp ".*\.(cls|trigger)$" -)
+fi
+
+[ -n "$apex_files" ] || { env printf "\e[1;32m\u2713\e[0m No files for PMD to check\n" && exit 0; }
+
+pmd_success=true
+
+temp_pmd_file=/tmp/pmd_files_to_check
+trap "rm -f $temp_pmd_file" EXIT
+echo "$apex_files" >"$temp_pmd_file"
+
+if [ -z "$(command -v pmd)" ]; then
+    bash pmd/bin/pmd check --rulesets pmd/rulesets/apex.xml --format textcolor --no-cache --no-progress --file-list "$temp_pmd_file" || pmd_success=false
+else
+    pmd --rulesets pmd/rulesets/apex.xml --format textcolor --no-cache --no-progress --file-list "$temp_pmd_file" || pmd_success=false
+fi
+
+if [ $pmd_success = true ]; then
+    env printf "\e[1;32m\u2713\e[0m PMD found no violations\n"
+    exit 0
+else
+    exit 1
+fi

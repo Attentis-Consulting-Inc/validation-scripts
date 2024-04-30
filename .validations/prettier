@@ -1,0 +1,18 @@
+#!/bin/sh
+#
+# Checks files for formatting with Prettier. Installs prettier and the Apex plugin if not present
+# Arguments:
+#       Set of files to check
+#       (optional) a list of files or directories to ignore
+
+[ -n "$1" ] || exit 0
+
+env printf "\e[1;34m-----\n\u279C Running Prettier\n-----\e[0m\n"
+
+temp_ignore_file=.prettierignore_temp
+trap "rm -f $temp_ignore_file" EXIT
+echo "$2" >"$temp_ignore_file"
+echo "*.xml" >>"$temp_ignore_file"
+echo "*.svg" >>"$temp_ignore_file"
+
+echo "$1" | xargs npx prettier --check --ignore-unknown --ignore-path "$temp_ignore_file" .prettierignore .gitignore -- || exit 1

@@ -1,0 +1,37 @@
+#!/bin/sh
+#
+# Validate a set of lightning components with ESLint
+# Arguments:
+#       the set of filepaths or directories to check
+#       (optional) a list of files or directories to ignore
+#       (optional) "directories"/"files" indicating if the first argument are directories to search, or filepaths containing files to check
+
+[ -n "$1" ] || exit 0
+mode="files"
+[ -n "$3" ] && mode="$3"
+
+temp_ignore_file=/tmp/eslint_ignore
+trap "rm -f $temp_ignore_file" EXIT
+echo "$2" >"$temp_ignore_file"
+sed -i 's|$|*|' "$temp_ignore_file"
+
+env printf "\e[1;34m-----\n\u279C Running ESLint\n-----\e[0m\n"
+
+if [ "$mode" = "directories" ]; then
+    lightning_files=$(echo "$1" | sed 's| |\n|g' | xargs -I {} find {} -type f -path "*/lwc/*/*.js" -or -path "*/aura/*/*.js")
+elif [ "$mode" = "files" ]; then
+    lightning_files=$(echo "$1" | grep --extended-regexp ".*/(lwc|aura)/.*.js$" -)
+fi
+
+files_to_check=$(echo "$lightning_files" | grep --invert-match --file="$temp_ignore_file" --)
+[ -n "$files_to_check" ] || { env printf "\e[1;32m\u2713\e[0m No files for ESLint to check\n" && exit 0; }
+
+eslint_success=true
+echo "$files_to_check" | xargs npx eslint -- || eslint_success=false
+
+if [ $eslint_success = true ]; then
+    env printf "\e[1;32m\u2713\e[0m All files pass ESLint\n"
+    exit 0
+else
+    exit 1
+fi

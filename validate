@@ -1,0 +1,193 @@
+#!/bin/sh
+
+display_help() {
+    echo "Usage: $(basename "$0") <option> " >&2
+    echo "Run validations on an sfdx project for: Formatting, Prettier, PMD, ESLint, and run Jest tests"
+    echo "Options are mutually exclusive and only one may be provided"
+    echo
+    echo "Options:"
+    echo "   -a, --all (default)                        run validations for the entire project"
+    echo "   -p, --package <name> [<name>...]           run validations on one or more packages by <name>"
+    echo "   -s, --staged                               run validations on staged files"
+    echo "   -c, --commit [<hash>]                      run validations on <hash> commit against parent (default: HEAD)"
+    echo "   -d, --diff <hash 1> [<hash 2>]             run validations on the diff between <hash 1> and <hash 2> (default: HEAD)"
+    echo
+    echo "   -h, --help                                 display this help"
+    exit 1
+}
+
+check_if_in_git() {
+    git rev-parse --show-toplevel >/dev/null 2>&1 || { echo "Not in a git repository" >&2 && exit 1; }
+}
+
+validate_commit() {
+    parsed_hash=$(git rev-parse --short "$1" 2>/dev/null) || return 1
+}
+
+validate_parent() {
+    (git rev-parse --short "$1^1" >/dev/null 2>&1) || { echo "$1 does not have a parent to validate against" >&2 && exit 1; }
+}
+
+validate_exclusive_options() {
+    [ -z $validation_mode ] || { echo "Only one option may be provided" >&2 && echo && display_help; }
+}
+
+args() {
+    # Parse flags
+    options=$(getopt -o apscdhw --long 'all,package,staged,commit,diff,help,pipeline' -- "$@") || exit 1
+    eval set -- "$options"
+    while true; do
+        case "$1" in
+            -a | --all)
+                validate_exclusive_options
+                validation_mode="all"
+                shift
+                ;;
+            -p | --package)
+                validate_exclusive_options
+                validation_mode="package"
+                shift
+                ;;
+            -s | --staged)
+                validate_exclusive_options
+                check_if_in_git
+                validation_mode="staged"
+                shift
+                ;;
+            -c | --commit)
+                validate_exclusive_options
+                validation_mode="commit"
+                check_if_in_git
+                shift
+                ;;
+            -d | --diff)
+                validate_exclusive_options
+                validation_mode="diff"
+                check_if_in_git
+                shift
+                ;;
+            -w | --pipeline)
+                validate_exclusive_options
+                validation_mode="pipeline"
+                check_if_in_git
+                shift
+                ;;
+            -h | --help)
+                validate_exclusive_options
+                display_help
+                ;;
+            --)
+                shift && break
+                ;;
+        esac
+    done
+
+    shift
+
+    [ -n "$validation_mode" ] || validation_mode="all"
+
+    # Validate flag parameters
+    case "$validation_mode" in
+        "package")
+            [ -n "$1" ] || { echo "--package requires at least one name to be provided" >&2 && exit 1; }
+            for package in "$@"; do
+                [ "$(echo "$project_packages" | grep "$package" --line-regexp --count --directories=read)" -gt 0 ] || { echo "$package is not a valid package name" >&2 && exit 1; }
+            done
+            selected_packages="$*"
+            ;;
+        "commit")
+            if [ -n "$1" ]; then
+                hash=$1
+            else
+                hash="HEAD"
+            fi
+            validate_commit "$hash" || { echo "$hash is not a valid commit hash" >&2 && exit 1; }
+            commit="$parsed_hash"
+            validate_parent "$commit"
+            ;;
+        "pipeline")
+            commit=$(git rev-parse --short "HEAD" 2>/dev/null)
+            validate_parent "$commit"
+            ;;
+        "diff")
+            [ -n "$1" ] || { echo "--diff requires at least one commit hash" >&2 && exit 1; }
+            hash="$1"
+            if [ -n "$2" ]; then
+                hash_2=$2
+            else
+                hash_2=$(git rev-parse --short HEAD)
+            fi
+            validate_commit "$hash" || { echo "$hash is not a valid commit hash" >&2 && exit 1; }
+            hash_1="$parsed_hash"
+            validate_commit "$hash_2" || { echo "$hash_2 is not a valid commit hash" >&2 && exit 1; }
+            hash_2="$parsed_hash"
+            (git merge-base --is-ancestor "$hash_1" "$hash_2" 2>/dev/null) || { echo "$hash_2 is not an ancestor of $hash_1" >&2 && exit 1; }
+            ;;
+
+    esac
+}
+
+this_dir=$(cd -- "$(dirname -- "$0")" >/dev/null && pwd)
+utils_dir="$this_dir"/.utils
+validations_dir="$this_dir"/.validations
+
+# Guard for required commands and files
+[ -f sfdx-project.json ] || { echo "Must be run from the root of an SFDX project" >&2 && return 1; }
+valid_reqs=true
+[ "$(command -v jq)" ] || { echo "Cannot find jq." >&2 && valid_reqs=false; }
+[ "$(command -v npm)" ] || { echo "Cannot find npm." >&2 && valid_reqs=false; }
+[ "$(command -v pmd)" ] || [ -f pmd/bin/pmd ] || { echo "Cannot find the pmd binary." >&2 && valid_reqs=false; }
+[ -f pmd/rulesets/apex.xml ] || { echo "Cannot find the apex ruleset for pmd at the expected location." >&2 && valid_reqs=false; }
+npm_installed_packages=$(npm ls -i)
+{ (echo "$npm_installed_packages" | grep "prettier@" >/dev/null 2>&1) && (echo "$npm_installed_packages" | grep "prettier-plugin-apex@" >/dev/null 2>&1); } || { echo "Cannot find Prettier or its Apex plugin." >&2 && valid_reqs=false; }
+{ (echo "$npm_installed_packages" | grep "eslint@" >/dev/null 2>&1) && (echo "$npm_installed_packages" | grep "@lwc/eslint-plugin-lwc@" >/dev/null 2>&1) && (echo "$npm_installed_packages" | grep "@salesforce/eslint-config-lwc@" >/dev/null 2>&1) && (echo "$npm_installed_packages" | grep "@salesforce/eslint-plugin-aura@" >/dev/null 2>&1) && (echo "$npm_installed_packages" | grep "@salesforce/eslint-plugin-lightning@" >/dev/null 2>&1); } || { echo "Cannot find ESLint or the Salesforce plugins." >&2 && valid_reqs=false; }
+(echo "$npm_installed_packages" | grep "@salesforce/sfdx-lwc-jest" >/dev/null 2>&1) || { echo "Cannot find the Salesforce Jest package." >&2 && valid_reqs=false; }
+
+[ $valid_reqs = true ] || { echo "" && echo "Some prerequisites not met. Please follow the setup instructions on the repository" >&2 && exit 1; }
+
+# Parse arguments
+parsed_hash=
+validation_mode=
+project_packages="$(/bin/sh "$utils_dir"/getPackages)"
+args "$0" "$@"
+
+# Get set of files to validate
+fileset=
+case "$validation_mode" in
+    "all")
+        fileset="$project_packages"
+        ;;
+    "package")
+        fileset="$selected_packages"
+        ;;
+    "staged")
+        fileset=$(git --no-pager diff --cached --name-only --diff-filter=AM | sed 's| |\\ |g')
+        ;;
+    "commit" | "pipeline")
+        fileset=$(git --no-pager diff --name-only --diff-filter=AM "$commit"^1.."$commit" | sed 's| |\\ |g')
+        ;;
+    "diff")
+        fileset=$(git --no-pager diff --name-only --diff-filter=AM "$hash_1".."$hash_2" | sed 's| |\\ |g')
+        ;;
+esac
+
+[ -n "$fileset" ] || { env printf "\e[1;33m\uff01\e[0m No files to check\n" && exit 0; }
+
+if [ "$validation_mode" = "pipeline" ]; then
+    echo "$fileset"
+else
+    sfdx_version="$(/bin/sh "$utils_dir"/getVersion)"
+    omnistudio_components="$(/bin/sh "$utils_dir"/getOmnistudio)"
+    if [ "$validation_mode" = "all" ] || [ "$validation_mode" = "package" ]; then
+        find_mode="directories"
+    else
+        find_mode="files"
+    fi
+
+    /bin/sh "$validations_dir"/version "$sfdx_version" "$fileset" "$omnistudio_components"
+    /bin/sh "$validations_dir"/whitespace "$fileset" "$omnistudio_components"
+    /bin/sh "$validations_dir"/prettier "$fileset" "$omnistudio_components"
+    /bin/sh "$validations_dir"/pmd "$fileset" "$find_mode"
+    /bin/sh "$validations_dir"/eslint "$fileset" "$omnistudio_components" "$find_mode"
+    /bin/sh "$validations_dir"/jest "$fileset" "$find_mode"
+fi
