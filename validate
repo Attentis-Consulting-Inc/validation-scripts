@@ -189,5 +189,5 @@ else
     /bin/sh "$validations_dir"/prettier "$fileset" "$omnistudio_components"
     /bin/sh "$validations_dir"/pmd "$fileset" "$find_mode"
     /bin/sh "$validations_dir"/eslint "$fileset" "$omnistudio_components" "$find_mode"
-    /bin/sh "$validations_dir"/jest "$fileset" "$omnistudio_components" "$find_mode"
+    /bin/sh "$validations_dir"/jest "$fileset" "$find_mode"
 fi

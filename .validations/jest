@@ -3,7 +3,6 @@
 # Run Jest on a set of lightning web components
 # Arguments:
 #       the set of filepaths or directories to check
-#       (optional) a list of files or directories to ignore
 #       (optional) "directories"/"files" indicating if the first argument are directories to search, or filepaths containing files to check
 #
 # If passed a set of directories, all tests found within those directories will be run. If passed a set of files, any file passed corresponding to an lwc component will cause all of those components' test to run, if any.
@@ -11,11 +10,6 @@
 [ -n "$1" ] || exit 0
 mode="files"
 [ -n "$3" ] && mode="$3"
-
-ignore_files=
-if [ -n "$2" ]; then
-    ignore_files=$(echo "$2" | sed 's|^|<rootDir>/|' | sed 's|$|/*|')
-fi
 
 env printf "\e[1;34m-----\n\u279C Running Jest tests\n-----\e[0m\n"
 
@@ -27,7 +21,4 @@ fi
 
 [ -n "$roots" ] || { env printf "\e[1;32m\u2713\e[0m No Jest tests to run\n" && exit 0; }
 
-roots_flag=$(echo "$roots" | xargs echo '--roots')
-flags=$(echo "$ignore_files" | xargs echo "$roots_flag --coveragePathIgnorePatterns")
-
-echo "$flags" | xargs npm run test:unit:coverage -- -- --passWithNoTests || exit 1
+echo "$roots" | xargs npm run test:unit:coverage -- --skipApiVersionCheck -- --passWithNoTests --roots || exit 1
