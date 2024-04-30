@@ -161,13 +161,13 @@ case "$validation_mode" in
         fileset="$selected_packages"
         ;;
     "staged")
-        fileset=$(git diff --cached --name-only --diff-filter=AM | sed 's| |\\ |g')
+        fileset=$(git --no-pager diff --cached --name-only --diff-filter=AM | sed 's| |\\ |g')
         ;;
     "commit" | "pipeline")
-        fileset=$(git diff --name-only --diff-filter=AM "$commit"^1.."$commit" | sed 's| |\\ |g')
+        fileset=$(git --no-pager diff --name-only --diff-filter=AM "$commit"^1.."$commit" | sed 's| |\\ |g')
         ;;
     "diff")
-        fileset=$(git diff --name-only --diff-filter=AM "$hash_1".."$hash_2" | sed 's| |\\ |g')
+        fileset=$(git --no-pager diff --name-only --diff-filter=AM "$hash_1".."$hash_2" | sed 's| |\\ |g')
         ;;
 esac
 
