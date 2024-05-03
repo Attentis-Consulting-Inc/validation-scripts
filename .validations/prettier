@@ -14,5 +14,7 @@ trap "rm -f $temp_ignore_file" EXIT
 echo "$2" >"$temp_ignore_file"
 echo "*.xml" >>"$temp_ignore_file"
 echo "*.svg" >>"$temp_ignore_file"
+cat .prettierignore >>"$temp_ignore_file"
+cat .gitignore >>"$temp_ignore_file"
 
-echo "$1" | xargs npx prettier --check --ignore-unknown --ignore-path "$temp_ignore_file" .prettierignore .gitignore -- || exit 1
+echo "$1" | xargs npx prettier --check --ignore-unknown --ignore-path "$temp_ignore_file" -- || exit 1
