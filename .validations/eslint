@@ -15,7 +15,7 @@ trap "rm -f $temp_ignore_file" EXIT
 echo "$2" >"$temp_ignore_file"
 sed -i 's|$|*|' "$temp_ignore_file"
 
-env printf "\e[1;34m-----\n\u279C Running ESLint\n-----\e[0m\n"
+env printf "\n\e[1;34m-----\n\u279C Running ESLint\n-----\e[0m\n"
 
 if [ "$mode" = "directories" ]; then
     lightning_files=$(echo "$1" | sed 's| |\n|g' | xargs -I {} find {} -type f -path "*/lwc/*/*.js" -or -path "*/aura/*/*.js")
@@ -27,10 +27,14 @@ files_to_check=$(echo "$lightning_files" | grep --invert-match --file="$temp_ign
 [ -n "$files_to_check" ] || { env printf "\e[1;32m\u2713\e[0m No files for ESLint to check\n" && exit 0; }
 
 eslint_success=true
-echo "$files_to_check" | xargs npx eslint -- || eslint_success=false
+echo "$files_to_check" | xargs npx eslint -- || {
+    eslint_success=false
+    env printf "\n\e[1;31m\xE2\x9D\x8C ESLint found some issues\e[0m\n" >&2
+    env printf "\e[1;33m\u2BC5\e[0m Check the indicated rule violations and fix them\n"
+}
 
 if [ $eslint_success = true ]; then
-    env printf "\e[1;32m\u2713\e[0m All files pass ESLint\n"
+    env printf "\n\e[1;32m\u2713\e[0m All files pass ESLint\n"
     exit 0
 else
     exit 1

@@ -7,7 +7,7 @@
 
 [ -n "$1" ] || exit 0
 
-env printf "\e[1;34m-----\n\u279C Running Prettier\n-----\e[0m\n"
+env printf "\n\e[1;34m-----\n\u279C Running Prettier\n-----\e[0m\n"
 
 temp_ignore_file=.prettierignore_temp
 trap "rm -f $temp_ignore_file" EXIT
@@ -17,4 +17,8 @@ echo "*.svg" >>"$temp_ignore_file"
 cat .prettierignore >>"$temp_ignore_file"
 cat .gitignore >>"$temp_ignore_file"
 
-echo "$1" | xargs npx prettier --check --ignore-unknown --ignore-path "$temp_ignore_file" -- || exit 1
+echo "$1" | xargs npx prettier --check --ignore-unknown --ignore-path "$temp_ignore_file" -- || {
+    env printf "\n\e[1;31m\xE2\x9D\x8C Prettier found some issues\e[0m\n" >&2
+    env printf "\e[1;33m\u2BC5\e[0m Run prettier --write on the indicated files to format them\n"
+    exit 1
+}

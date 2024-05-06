@@ -21,4 +21,8 @@ fi
 
 [ -n "$roots" ] || { env printf "\e[1;32m\u2713\e[0m No Jest tests to run\n" && exit 0; }
 
-echo "$roots" | xargs npm run test:unit:coverage -- --skipApiVersionCheck -- --passWithNoTests --roots || exit 1
+echo "$roots" | xargs npm run test:unit:coverage -- --skipApiVersionCheck -- --passWithNoTests --roots || {
+    env printf "\n\e[1;31m\xE2\x9D\x8C Some Jest tests failed, or coverage is insufficient\e[0m\n" >&2
+    env printf "\e[1;33m\u2BC5\e[0m Check on failed tests, or missing coverage error messages above\n"
+    exit 1
+}

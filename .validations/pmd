@@ -9,7 +9,7 @@
 mode="files"
 [ -n "$2" ] && mode="$2"
 
-env printf "\e[1;34m-----\n\u279C Running PMD\n-----\e[0m\n"
+env printf "\n\e[1;34m-----\n\u279C Running PMD\n-----\e[0m\n"
 
 if [ "$mode" = "directories" ]; then
     apex_files=$(echo "$1" | sed 's| |\n|g' | xargs -I {} find {} -type f -name "*.cls" -or -name "*.trigger")
@@ -28,11 +28,15 @@ echo "$apex_files" >"$temp_pmd_file"
 if [ -z "$(command -v pmd)" ]; then
     bash pmd/bin/pmd check --rulesets pmd/rulesets/apex.xml --format textcolor --no-cache --no-progress --file-list "$temp_pmd_file" || pmd_success=false
 else
-    pmd --rulesets pmd/rulesets/apex.xml --format textcolor --no-cache --no-progress --file-list "$temp_pmd_file" || pmd_success=false
+    pmd --rulesets pmd/rulesets/apex.xml --format textcolor --no-cache --no-progress --file-list "$temp_pmd_file" || {
+        pmd_success=false
+        env printf "\n\e[1;31m\xE2\x9D\x8C PMD found some issues\e[0m\n" >&2
+        env printf "\e[1;33m\u2BC5\e[0m Check the indicated rule violations and fix them\n"
+    }
 fi
 
 if [ $pmd_success = true ]; then
-    env printf "\e[1;32m\u2713\e[0m PMD found no violations\n"
+    env printf "\n\e[1;32m\u2713\e[0m PMD found no violations\n"
     exit 0
 else
     exit 1
