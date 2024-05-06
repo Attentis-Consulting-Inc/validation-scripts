@@ -13,7 +13,7 @@ trap "rm -f $temp_ignore_file" EXIT
 echo "$2" >"$temp_ignore_file"
 sed -i 's|$|*|' "$temp_ignore_file"
 
-env printf "\e[1;34m-----\n\u279C Checking whitespace\n-----\e[0m\n"
+env printf "\n\e[1;34m-----\n\u279C Checking whitespace\n-----\e[0m\n"
 
 violations=0
 
@@ -51,12 +51,14 @@ if [ $whitespace_violations -eq 0 ]; then
     env printf "\e[1;32m\u2713\e[0m No trailing whitespace issues found\n"
 else
     env printf "\n\e[1;31m\xE2\x9D\x8C %s total trailing whitespace problems\e[0m\n" "$whitespace_violations" >&2
+    env printf "\e[1;33m\u2BC5\e[0m Remove any spaces at the end of indicated lines\n"
 fi
 
 if [ $indentation_violations -eq 0 ]; then
     env printf "\e[1;32m\u2713\e[0m No tab indentation issues found\n"
 else
     env printf "\n\e[1;31m\xE2\x9D\x8C %s total tab indentation problems\e[0m\n" "$indentation_violations" >&2
+    env printf "\e[1;33m\u2BC5\e[0m Change all indicated lines to use only space-based indentation\n"
 fi
 
 [ $violations -eq 0 ] || exit 1
