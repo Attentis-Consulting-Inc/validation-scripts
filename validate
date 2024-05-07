@@ -175,6 +175,7 @@ esac
 
 if [ "$validation_mode" = "pipeline" ]; then
     echo "$fileset"
+    exit 0
 else
     sfdx_version="$(/bin/sh "$utils_dir"/getVersion)"
     omnistudio_components="$(/bin/sh "$utils_dir"/getOmnistudio)"
@@ -191,6 +192,5 @@ else
     /bin/sh "$validations_dir"/pmd "$fileset" "$find_mode" || success=false
     /bin/sh "$validations_dir"/eslint "$fileset" "$omnistudio_components" "$find_mode" || success=false
     /bin/sh "$validations_dir"/jest "$fileset" "$find_mode" || success=false
+    [ "$success" = true ] || exit 1
 fi
-
-[ "$success" = true ] || exit 1
