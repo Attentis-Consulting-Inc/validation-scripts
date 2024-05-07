@@ -18,7 +18,7 @@ env printf "\e[1;34m-----\n\u279C Checking project version\n-----\e[0m\n"
 env printf "\e[1;33m\u2731\e[0m Project version is v%s\n" "$1"
 
 violations=0
-files_with_version=$(echo "$2" | xargs grep --perl "<(apiV|v)ersion\K.*(?=</(apiV|v)ersion>)" --with-filename --only-matching --recursive --include="*.xml" --)
+files_with_version=$(echo "$2" | xargs grep --perl "<(apiV|v)ersion\K.*(?=</(apiV|v)ersion>)" --with-filename --only-matching --recursive --include="*-meta.xml" --)
 while read -r line; do
     [ -n "$line" ] || continue
 
