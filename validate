@@ -191,6 +191,10 @@ else
     /bin/sh "$validations_dir"/prettier "$fileset" "$omnistudio_components" || success=false
     /bin/sh "$validations_dir"/pmd "$fileset" "$find_mode" || success=false
     /bin/sh "$validations_dir"/eslint "$fileset" "$omnistudio_components" "$find_mode" || success=false
+
+    if [ "$validation_mode" = "pipeline" ]; then
+        find_mode="all"
+    fi
     /bin/sh "$validations_dir"/jest "$fileset" "$find_mode" || success=false
     [ "$success" = true ] || exit 1
 fi
