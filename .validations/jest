@@ -17,6 +17,8 @@ if [ "$mode" = "directories" ]; then
     roots=$(echo "$1" | sed 's| |\n|g')
 elif [ "$mode" = "files" ]; then
     roots=$(echo "$1" | grep "/lwc/" | sed 's|/lwc/\([^/]*\).*|/lwc/\1|' | uniq)
+elif [ "$mode" = "all" ]; then
+    roots=.
 fi
 
 [ -n "$roots" ] || { env printf "\e[1;32m\u2713\e[0m No Jest tests to run\n" && exit 0; }
